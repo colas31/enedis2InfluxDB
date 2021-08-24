@@ -33,3 +33,73 @@ This code allows to push all history from Enedis to an influxDB instance
 		 - Mettre une Auto-actualisation (cron): `0 9 * * *`
 		 - Créer une commande:
 			 - Ouvrir le fichier enedis2influxdb/resources/cron.php
+
+
+## Grafana: requetes
+### Consommation par mois
+
+![Consommation par mois](./data/img/Consommation-par-mois.PNG)
+
+Requete:
+```
+import "date"
+year = date.truncate(t: now(), unit: 1y)
+from(bucket: "<bucket_name>")
+|> range(start: year)
+|> filter(fn: (r) => r["_measurement"] == "electricity")
+|> filter(fn: (r) => r["mode"] == "daily")
+|> filter(fn: (r) => r["_field"] == "energy")
+|> aggregateWindow(every: 1mo, timeSrc: "_stop", timeDst: "_time", fn: sum, createEmpty: false)
+|> yield(name: "sum")
+```
+Transform:
+ - Labels to fields et selectionner monthH
+![Transform](./data/img/transform.PNG)
+
+
+
+Visualisation de type graph
+Axes:
+ - Left Y:
+	 - Unit Wh
+ - X-Axis:
+	 - Show: ok
+	 - Mode: Series
+	 - Value: Total
+![X-Axis](./data/img/X-Axis.PNG)
+
+
+### Consommation par jour
+![Consommation par jour](./data/img/Consommation-par-jour.PNG)
+Requete:
+```
+from(bucket: "<bucket_name>")
+|>  range(start: v.timeRangeStart,  stop: v.timeRangeStop)
+|> filter(fn: (r)  => r["_measurement"] == "electricity")
+|> filter(fn: (r)  => r["mode"] == "daily")
+|> yield(name: "mean")
+```
+Query option:
+ - Relative time: now/M
+![query-option](./data/img/query-option.PNG)
+
+Transform:
+ - Labels to fields et selectionner monthH
+![Transform](./data/img/transform.PNG)
+
+Visualisation de type Time series
+
+###  Puissance moyenne consommée sur 30 min
+![Consommation par heure](./data/img/Consommation-par-heure.PNG)
+Requete:
+```
+from(bucket: "<bucket_name>")
+|> filter(fn: (r)  => r["_measurement"] == "electricity")
+|> filter(fn: (r)  => r["_field"] == "power")
+|> yield(name: "mean")
+```
+Query option:
+ - Relative time: now-1d/d
+![query-option](./data/img/query-option-heure.PNG)
+
+Visualisation de type Time series
